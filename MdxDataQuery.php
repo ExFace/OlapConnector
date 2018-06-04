@@ -32,7 +32,7 @@ class MdxDataQuery extends AbstractDataQuery
         return $this;
     }
     
-    public function toString()
+    public function toString($prettify = true)
     {
         return $this->getMdx();
     }
