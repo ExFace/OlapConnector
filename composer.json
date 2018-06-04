@@ -1,0 +1,24 @@
+{
+    "name": "exface/OlapDataConnector",
+    "require": {
+        "exface/core": "~0.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "\\exface\\OlapDataConnector\\": ""
+        },
+        "exclude-from-classmap": [
+            "/Config/",
+            "/Translations/",
+            "/Model/"
+        ]
+    },
+    "extra": {
+        "app": {
+            "app_uid": "0x11e867d65ec3534fbd190205857feb80",
+            "app_alias": "exface.OlapDataConnector",
+            "model_md5": "61ce20b7bbb50613aa1f719eff5ec157",
+            "model_timestamp": "2018-06-04 09:05:33"
+        }
+    }
+}
