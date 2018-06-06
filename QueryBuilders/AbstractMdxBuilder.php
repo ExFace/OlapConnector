@@ -220,6 +220,15 @@ MDX;
                 case EXF_COMPARATOR_IS:
                     $selects[] = "FILTER({$member}, Instr({$this->getDimensionOfMember($member)}.CurrentMember.Name, '{$filter->getCompareValue()}') > 0)";
                     break;
+                case EXF_COMPARATOR_IS_NOT:
+                    $selects[] = "FILTER({$member}, Instr({$this->getDimensionOfMember($member)}.CurrentMember.Name, '{$filter->getCompareValue()}') = 0)";
+                    break;
+                case EXF_COMPARATOR_GREATER_THAN:
+                case EXF_COMPARATOR_GREATER_THAN_OR_EQUALS:
+                case EXF_COMPARATOR_LESS_THAN:
+                case EXF_COMPARATOR_LESS_THAN_OR_EQUALS:
+                    $selects[] = "FILTER({$member}, {$member} {$filter->getComparator()} {$filter->getCompareValue()}))";
+                    break;
                 case EXF_COMPARATOR_EQUALS:
                     $selects[] = $member . '.[' . $filter->getCompareValue() . ']';
                     break;
