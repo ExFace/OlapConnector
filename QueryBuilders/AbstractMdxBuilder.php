@@ -11,13 +11,12 @@ use exface\Core\CommonLogic\QueryBuilder\QueryPartAttribute;
 use exface\Core\DataTypes\BooleanDataType;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\CommonLogic\QueryBuilder\QueryPartFilter;
+use exface\Core\DataTypes\SortingDirectionsDataType;
 
 
 abstract class AbstractMdxBuilder extends AbstractQueryBuilder
 {
-    const AXIS_COLUMNS = 0;
-    const AXIS_ROWS = 1;
-    const AXIS_WHERE = 'WHERE';
+    const INDENT = '    ';
     
     private $resultRowCountTotal = 0;
     
@@ -29,6 +28,11 @@ abstract class AbstractMdxBuilder extends AbstractQueryBuilder
     
     private $with = [];
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::read()
+     */
     public function read(AbstractDataConnector $data_connection = null)
     {
         if ($data_connection === null) {
@@ -53,14 +57,19 @@ abstract class AbstractMdxBuilder extends AbstractQueryBuilder
         return $cnt;
     }
     
+    /**
+     * 
+     * @return string
+     */
     protected function buildMdxSelect() : string
-    {        
-        $rows = $this->buildMdxSelectRows($this->getLimit(), $this->getOffset());
-        $columns = $this->buildMdxSelectColumns();
+    {   
+        $indent = self::INDENT;
+        $rows = $this->buildMdxSelectRows($indent, $this->getLimit(), $this->getOffset());
+        $columns = $this->buildMdxSelectColumns($indent);
         
         $wheres = $this->buildMdxSelectWheres();
         if (! empty($wheres)) {
-            $whereClause = implode(",\n  ", $wheres);
+            $whereClause = implode(",\n" . $indent, $wheres);
             $where = <<<MDX
 WHERE (
     {$whereClause}
@@ -86,8 +95,13 @@ MDX;
         return $mdx;
     
     }
-        
-    protected function buildMdxSelectColumns() : string
+    
+    /**
+     * 
+     * @param string $indent
+     * @return string
+     */
+    protected function buildMdxSelectColumns($indent = '') : string
     {
         $selects = [];
         foreach ($this->getAttributes() as $qpart) {
@@ -98,7 +112,7 @@ MDX;
         }
         
         if (! empty($selects)) {
-            $selectsString = implode(",\n    ", $selects);
+            $selectsString = implode(",\n".$indent.self::INDENT, $selects);
             $set =  <<<MDX
 NON EMPTY {
         {$selectsString}
@@ -111,9 +125,17 @@ MDX;
         return $set;
     }
     
-    protected function buildMdxSelectRows(int $limit = 0, int $offset = 0) : string
+    /**
+     * 
+     * @param string $indent
+     * @param int $limit
+     * @param int $offset
+     * @return string
+     */
+    protected function buildMdxSelectRows($indent = '', int $limit = 0, int $offset = 0) : string
     {
         $selects = [];
+        
         foreach ($this->getAttributes() as $qpart) {
             if ($this->isMeasure($qpart)) {
                 continue;
@@ -133,19 +155,18 @@ MDX;
                 $qpartSelects = $this->buildMdxSelectClauses($qpart, 'FILTER', $filters);
             }
             
-            $selects[] = implode(",\n    ", $qpartSelects);
+            $selects[] = implode(",\n".$indent, $qpartSelects);
         }
         
         if (! empty($selects)) {
-            $selectsString = implode(" *\n    ", $selects);
-            $set .=  <<<MDX
-{
-        {$selectsString}
-    }
-MDX;
+            $setIndent = $indent.self::INDENT;
+            $selectsString = implode(" *\n".$setIndent, $selects);
+            $set = "{\n{$setIndent}{$selectsString}\n{$indent}}";
             if (count($selects) > 1) {
-                $set = 'NONEMPTY(' . $set . ')';
+                $set = "NONEMPTY({$set})";
             }
+            
+            $set = $this->buildMdxSelectOrder($set, $this->getSorters());
             
             if ($limit > 0) {
                 $set = $this->buildMdxSubset($set, $limit, $offset);
@@ -157,6 +178,13 @@ MDX;
         return $set;
     }
     
+    /**
+     * 
+     * @param QueryPartAttribute $qpart
+     * @param string $function
+     * @param array $filters
+     * @return array
+     */
     protected function buildMdxSelectClauses(QueryPartAttribute $qpart, string $function = null, array $filters = null) : array
     {
         if (! empty($filters)) {
@@ -166,11 +194,24 @@ MDX;
         }
     }
     
+    /**
+     * 
+     * @param QueryPartAttribute $qpart
+     * @param string $function
+     * @return string
+     */
     protected function buildMdxSelectClause(QueryPartAttribute $qpart, string $function = null) : string
     {
         return $qpart->getDataAddress() . ($function !== null ? '.' . $function : '');
     }
     
+    /**
+     * 
+     * @param string $member
+     * @param array $filters
+     * @throws QueryBuilderException
+     * @return array
+     */
     protected function buildMdxSelectMemberFilters(string $member, array $filters) : array
     {
         $selects = [];
@@ -195,13 +236,19 @@ MDX;
         return $selects;
     }
     
-    
-    
+    /**
+     * 
+     * @return string
+     */
     protected function buildMdxFrom() : string
     {
         return 'FROM ' . $this->getCube($this->getMainObject());
     }
     
+    /**
+     * 
+     * @return string[]
+     */
     protected function buildMdxSelectWheres() : array
     {
         $wheres = [];
@@ -215,11 +262,21 @@ MDX;
         return $wheres;
     }
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::getResultTotalRows()
+     */
     public function getResultTotalRows()
     {
         return $this->resultRowCountTotal;
     }
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::canRead()
+     */
     public function canRead(MetaAttributeInterface $attribute): bool
     {
         try {
@@ -230,31 +287,61 @@ MDX;
         return strcasecmp($this->getCube($this->getMainObject()), $otherCube) === 0;
     }
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::getResultRows()
+     */
     public function getResultRows()
     {
         return $this->resultRows;
     }
     
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::getResultTotals()
+     */
     public function getResultTotals()
     {
         return $this->resultTotals;
     }
     
-    protected function getCube(MetaObjectInterface $object)
+    /**
+     * 
+     * @param MetaObjectInterface $object
+     * @return string
+     */
+    protected function getCube(MetaObjectInterface $object) : string
     {
         return $object->getDataAddress();
     }
     
+    /**
+     * 
+     * @param QueryPartAttribute $qpart
+     * @return bool
+     */
     protected function isMeasure(QueryPartAttribute $qpart) : bool
     {
         return StringDataType::startsWith($qpart->getDataAddress(), '[Measures].');
     }
     
+    /**
+     * 
+     * @param QueryPartFilter $qpart
+     * @return string
+     */
     protected function getDimensionOfFilter(QueryPartFilter $qpart) : string
     {
         return $qpart->getDataAddress();
     }
     
+    /**
+     * 
+     * @param string $path
+     * @return array
+     */
     protected function getFiltersForMember(string $path) : array
     {
         $result = [];
@@ -266,17 +353,33 @@ MDX;
         return $result;
     }
     
+    /**
+     * 
+     * @param string $mdx
+     * @param int $limit
+     * @param int $offset
+     * @return string
+     */
     protected function buildMdxSubset(string $mdx, int $limit, int $offset = 0) : string
     {
         return "SUBSET({$mdx}, {$offset}, {$limit})";
     }
     
+    /**
+     * 
+     * @param string $member
+     * @return string
+     */
     protected function getDimensionOfMember(string $member) : string
     {
         return StringDataType::substringBefore($member, '.', '', false, true);
     }
     
-    protected function buildMdxWith()
+    /**
+     * 
+     * @return string
+     */
+    protected function buildMdxWith() : string
     {
         if (! empty($this->with)) {
             $withs = implode("\n  ", $this->with);
@@ -289,14 +392,34 @@ MDX;
         return '';
     }
     
+    /**
+     * 
+     * @param string $statement
+     * @return AbstractMdxBuilder
+     */
     protected function addWith(string $statement) : AbstractMdxBuilder
     {
         $this->with[] = $statement;
         return $this;
     }
     
-    protected function hasPagination()
+    /**
+     * 
+     * @param string $rowSet
+     * @param array $sorterQparts
+     * @return string
+     */
+    protected function buildMdxSelectOrder(string $rowSet, array $sorterQparts) : string
     {
-        return $this->getLimit() > 0;
+        foreach ($sorterQparts as $qpart) {
+            $dir = $qpart->getOrder() == SortingDirectionsDataType::ASC ? 'BASC' : 'BDESC';
+            if ($this->isMeasure($qpart)) {
+                $sortBy = $qpart->getDataAddress();
+            } else {
+                $sortBy = $this->getDimensionOfMember($qpart->getDataAddress()) . '.CurrentMember.Member_Name';
+            }
+            $rowSet = "ORDER({$rowSet}, {$sortBy}, {$dir})";
+        }
+        return $rowSet;
     }
 }
