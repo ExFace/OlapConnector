@@ -14,9 +14,9 @@ TODO
 
 You can use [postman](https://www.getpostman.com/) to test your connection: 
 
-1) Create a new POST request to the URL you created in the previous step
-2) Go to the tab and select `raw`
-3) Paste the following code in the body and replace YOURCATALOG and YOURCUBE with the name of your catalog and cube respectively.
+1. Create a new POST request to the URL you created in the previous step
+2. Go to the tab and select `raw`
+3. Paste the following code in the body and replace `YOURCATALOG` and `YOURCUBE` with the name of your catalog and cube respectively.
 
 ```xml
 <Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/">
