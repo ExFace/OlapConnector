@@ -8,11 +8,9 @@ use exface\Core\Exceptions\QueryBuilderException;
 use exface\Core\CommonLogic\AbstractDataConnector;
 use exface\OlapDataConnector\MdxDataQuery;
 use exface\Core\CommonLogic\QueryBuilder\QueryPartAttribute;
-use exface\Core\DataTypes\BooleanDataType;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\CommonLogic\QueryBuilder\QueryPartFilter;
 use exface\Core\DataTypes\SortingDirectionsDataType;
-
 
 abstract class AbstractMdxBuilder extends AbstractQueryBuilder
 {
@@ -46,10 +44,27 @@ abstract class AbstractMdxBuilder extends AbstractQueryBuilder
         $originalLimit = $this->getLimit();
         $this->setLimit($originalLimit+1, $this->getOffset());
         
+        $addressMapping = [];
+        foreach ($this->getAttributes() as $qpart) {
+            if ($qpart->getDataAddress() !== $qpart->getAlias()) {
+                $addressMapping[$qpart->getDataAddress()][] = $qpart->getAlias();
+            }
+        }
+        
         $query = new MdxDataQuery($this->buildMdxSelect());
         $query = $data_connection->query($query);
         
         $this->resultRows = $query->getResultArray();
+        if (! empty($addressMapping)) {
+            foreach ($this->resultRows as $nr => $row) {
+                foreach ($addressMapping as $dataAddress => $aliases) {
+                    foreach ($aliases as $alias) {
+                        $row[$alias] = $row[$dataAddress];
+                    }
+                }
+                $this->resultRows[$nr] = $row;
+            }
+        }
         $cnt = count($this->resultRows);
         
         $this->resultRowCountTotal = $this->getOffset() + $cnt;
@@ -160,7 +175,7 @@ MDX;
         
         if (! empty($selects)) {
             $setIndent = $indent.self::INDENT;
-            $selectsString = implode(" *\n".$setIndent, $selects);
+            $selectsString = implode(" *\n".$setIndent, array_unique($selects));
             $set = "{\n{$setIndent}{$selectsString}\n{$indent}}";
             if (count($selects) > 1) {
                 $set = "NONEMPTY({$set})";
@@ -284,9 +299,9 @@ MDX;
     /**
      * 
      * {@inheritDoc}
-     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::canRead()
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::canReadAttribute()
      */
-    public function canRead(MetaAttributeInterface $attribute): bool
+    public function canReadAttribute(MetaAttributeInterface $attribute): bool
     {
         try {
             $otherCube = $this->getCube($attribute->getObject());
