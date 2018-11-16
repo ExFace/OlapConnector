@@ -5,12 +5,14 @@ use exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder;
 use exface\Core\Interfaces\Model\MetaAttributeInterface;
 use exface\Core\Interfaces\Model\MetaObjectInterface;
 use exface\Core\Exceptions\QueryBuilderException;
-use exface\Core\CommonLogic\AbstractDataConnector;
 use exface\OlapDataConnector\MdxDataQuery;
 use exface\Core\CommonLogic\QueryBuilder\QueryPartAttribute;
 use exface\Core\DataTypes\StringDataType;
 use exface\Core\CommonLogic\QueryBuilder\QueryPartFilter;
 use exface\Core\DataTypes\SortingDirectionsDataType;
+use exface\Core\Interfaces\DataSources\DataConnectionInterface;
+use exface\Core\Interfaces\DataSources\DataQueryResultDataInterface;
+use exface\Core\CommonLogic\DataQueries\DataQueryResultData;
 
 /**
  * Generic MDX builder.
@@ -49,12 +51,6 @@ abstract class AbstractMdxBuilder extends AbstractQueryBuilder
 {
     const INDENT = '    ';
     
-    private $resultRowCountTotal = 0;
-    
-    private $resultTotals = [];
-    
-    private $resultRows = [];
-    
     private $filtersOnAxes = [];
     
     private $with = [];
@@ -66,12 +62,55 @@ abstract class AbstractMdxBuilder extends AbstractQueryBuilder
      * {@inheritDoc}
      * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::read()
      */
-    public function read(AbstractDataConnector $data_connection = null)
+    public function read(DataConnectionInterface $data_connection) : DataQueryResultDataInterface
     {
-        if ($data_connection === null) {
-            $data_connection = $this->getMainObject()->getDataConnection();
+        // Increase limit by one to check if there are more rows
+        $originalLimit = $this->getLimit();
+        if ($originalLimit > 0) {
+            $this->setLimit($originalLimit+1, $this->getOffset());
         }
         
+        $query = new MdxDataQuery($this->buildMdxSelect());
+        $query = $data_connection->query($query);
+        
+        $resultRows = $query->getResultArray();
+        $aliasMappings = $this->getResultColumnAliases();
+        if (! empty($aliasMappings)) {
+            foreach ($resultRows as $nr => $row) {
+                foreach ($aliasMappings as $columnName => $aliases) {
+                    foreach ($aliases as $alias) {
+                        $row[$alias] = $row[$columnName];
+                    }
+                }
+                $resultRows[$nr] = $row;
+            }
+        }
+        $cnt = count($resultRows);
+        
+        $hasMoreRows = ($originalLimit > 0 && $cnt === $originalLimit+1);
+        if ($hasMoreRows === true) {
+            $affectedCounter = $originalLimit;
+            array_pop($resultRows);
+        } else {
+            $affectedCounter = $cnt;
+        }
+        
+        if ($hasMoreRows === false) {
+            $totalCount = $cnt + $this->getOffset();
+        } else {
+            $hasMoreRows = null;
+        }
+        
+        return new DataQueryResultData($resultRows, $affectedCounter, $hasMoreRows, $totalCount);
+    }
+    
+    /**
+     * 
+     * {@inheritDoc}
+     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::count()
+     */
+    public function count(DataConnectionInterface $data_connection) : DataQueryResultDataInterface
+    {
         // TODO Counting the total amount of rows produced by an MDX statement beyond the current page
         // seems not so easy in MDX, so for the moment we just requenst limit+1 rows to tell the UI,
         // there is another page.
@@ -84,23 +123,13 @@ abstract class AbstractMdxBuilder extends AbstractQueryBuilder
         $query = new MdxDataQuery($this->buildMdxSelect());
         $query = $data_connection->query($query);
         
-        $this->resultRows = $query->getResultArray();
-        $aliasMappings = $this->getResultColumnAliases();
-        if (! empty($aliasMappings)) {
-            foreach ($this->resultRows as $nr => $row) {
-                foreach ($aliasMappings as $columnName => $aliases) {
-                    foreach ($aliases as $alias) {
-                        $row[$alias] = $row[$columnName];
-                    }
-                }
-                $this->resultRows[$nr] = $row;
-            }
-        }
-        $cnt = count($this->resultRows);
+        $resultRows = $query->getResultArray();
+        $cnt = count($resultRows);
         
-        $this->resultRowCountTotal = $this->getOffset() + $cnt;
+        $hasMoreRows = ($cnt === $originalLimit+1);
+        $totalCount = $cnt + $this->getOffset();
         
-        return $cnt;
+        return new DataQueryResultData([], $totalCount, $hasMoreRows, $totalCount);
     }
     
     /**
@@ -353,16 +382,6 @@ MDX;
     /**
      * 
      * {@inheritDoc}
-     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::getResultTotalRows()
-     */
-    public function getResultTotalRows()
-    {
-        return $this->resultRowCountTotal;
-    }
-    
-    /**
-     * 
-     * {@inheritDoc}
      * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::canReadAttribute()
      */
     public function canReadAttribute(MetaAttributeInterface $attribute): bool
@@ -373,26 +392,6 @@ MDX;
             return false;
         }
         return strcasecmp($this->getCube($this->getMainObject()), $otherCube) === 0;
-    }
-    
-    /**
-     * 
-     * {@inheritDoc}
-     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::getResultRows()
-     */
-    public function getResultRows()
-    {
-        return $this->resultRows;
-    }
-    
-    /**
-     * 
-     * {@inheritDoc}
-     * @see \exface\Core\CommonLogic\QueryBuilder\AbstractQueryBuilder::getResultTotals()
-     */
-    public function getResultTotals()
-    {
-        return $this->resultTotals;
     }
     
     /**
