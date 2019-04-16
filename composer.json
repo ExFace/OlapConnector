@@ -1,7 +1,7 @@
 {
     "name": "exface/OlapDataConnector",
     "require": {
-        "exface/core": "^0.1",
+        "exface/core": "~0.1",
         "kabachello/phpolapi": "^2.0.0"
     },
     "autoload": {
