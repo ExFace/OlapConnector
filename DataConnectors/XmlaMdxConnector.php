@@ -72,7 +72,7 @@ class XmlaMdxConnector extends AbstractDataConnectorWithoutTransactions
      * The server URI for the XMLA endpoint
      * 
      * @uxon-property server
-     * @uxon-type string
+     * @uxon-type uri
      * 
      * @param string $uri
      * @return XmlaMdxConnector
@@ -120,7 +120,7 @@ class XmlaMdxConnector extends AbstractDataConnectorWithoutTransactions
      * The password for basic HTTP authentication
      * 
      * @uxon-property password
-     * @uxon-type string
+     * @uxon-type password
      * 
      * @param string $password
      * @return XmlaMdxConnector
@@ -137,6 +137,16 @@ class XmlaMdxConnector extends AbstractDataConnectorWithoutTransactions
         return $this->catalogName;
     }
 
+    /**
+     * The name of the catalog to be used.
+     * 
+     * @uxon-property catalog_name
+     * @uxon-type string
+     * @uxon-required true
+     * 
+     * @param string $catalogName
+     * @return XmlaMdxConnector
+     */
     public function setCatalogName(string $catalogName) : XmlaMdxConnector
     {
         $this->catalogName = $catalogName;

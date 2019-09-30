@@ -10,7 +10,17 @@ use exface\OlapDataConnector\MdxDataQuery;
  * Data Connector to perform MDX queries on Microsoft Analytics Services via TSQL (EXPERIMENTAL!). 
  * 
  * This connector uses a linked server for the respective OLAP cube, which it creates
- * when connecting and drops when disconnecting.
+ * when connecting and drops when disconnecting:
+ * 
+ * ```
+ * sp_addlinkedserver 
+ *     @server='EXFOLAP', 
+ *     @srvproduct='[#olap_srvproduct#]',
+ *     @provider='[#olap_provider#]', 
+ *     @datasrc='[#olap_datasrc#]', 
+ *     @catalog='[#olap_catalog#]'
+ * 
+ * ```
  *
  * @author Andrej Kabachnik
  *        
@@ -85,6 +95,10 @@ SQL;
     }
 
     /**
+     * Custom srvproduct property of the linked server (empty strin by default).
+     * 
+     * @uxon-property olap_srvproduct
+     * @uxon-type string
      * 
      * @param string $olapSrvproduct
      * @return MsSqlMdxConnector
@@ -105,6 +119,7 @@ SQL;
     }
 
     /**
+     * The name of the data source to be used.
      * 
      * @uxon-property olap_datasrc
      * @uxon-type string
@@ -128,6 +143,7 @@ SQL;
     }
 
     /**
+     * The name of the catalog to be used.
      * 
      * @uxon-property olap_catalog
      * @uxon-type string
@@ -151,9 +167,11 @@ SQL;
     }
 
     /**
+     * Custom provider for the linked server (instead of MSOLAP by default).
      * 
      * @uxon-property olap_provider
      * @uxon-type string
+     * @uxon-default MSOLAP
      * 
      * @param string $olapProvider
      * @return MsSqlMdxConnector
