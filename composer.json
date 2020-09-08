@@ -1,25 +1,25 @@
 {
-	"name" : "exface/OlapDataConnector",
-	"require" : {
-		"exface/core" : "~0.1||^1.0",
-		"kabachello/phpolapi" : "^2.0.0"
-	},
-	"autoload" : {
-		"psr-4" : {
-			"\\exface\\OlapDataConnector\\" : ""
-		},
-		"exclude-from-classmap" : [
-			"/Config/",
-			"/Translations/",
-			"/Model/"
-		]
-	},
-	"extra" : {
-		"app" : {
-			"app_uid" : "0x11e867d65ec3534fbd190205857feb80",
-			"app_alias" : "exface.OlapDataConnector",
-			"model_md5" : "318f9bd0b74f49be24132f0a9c70e327",
-			"model_timestamp" : "2019-09-30 08:37:37"
-		}
-	}
+    "name": "exface/OlapDataConnector",
+    "require": {
+        "exface/core": "~0.1||^1.0",
+        "kabachello/phpolapi": "^2.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "\\exface\\OlapDataConnector\\": ""
+        },
+        "exclude-from-classmap": [
+            "/Config/",
+            "/Translations/",
+            "/Model/"
+        ]
+    },
+    "extra": {
+        "app": {
+            "app_uid": "0x11e867d65ec3534fbd190205857feb80",
+            "app_alias": "exface.OlapDataConnector",
+            "model_md5": "b5b5157ac90053113eb1dbeff573647a",
+            "model_timestamp": "2019-09-30 08:37:37"
+        }
+    }
 }
