@@ -48,6 +48,10 @@
         {
             "name": "UXON_SCHEMA",
             "attribute_alias": "UXON_SCHEMA"
+        },
+        {
+            "name": "THUMBNAIL",
+            "attribute_alias": "THUMBNAIL"
         }
     ],
     "rows": [
@@ -61,9 +65,15 @@
             "NAME": "MDX over XMLA",
             "DESCRIPTION": "",
             "PROTOTYPE": "exface\/OlapDataConnector\/DataConnectors\/XmlaMdxConnector.php",
-            "UXON": "{\"server\":\"\",\"catalog_name\":\"\",\"user\":\"\",\"password\":\"\"}",
+            "UXON": {
+                "server": "",
+                "catalog_name": "",
+                "user": "",
+                "password": ""
+            },
             "WRAP_PATH": "",
-            "UXON_SCHEMA": "connection"
+            "UXON_SCHEMA": "connection",
+            "THUMBNAIL": null
         }
     ],
     "totals_rows": [],
